@@ -1,0 +1,67 @@
+---
+
+## 1.3 `azure/sentinel/query.kql`
+
+```kql
+// ============================================================
+// Microsoft Sentinel - KQL Detection Queries
+// Import: Sentinel -> Logs -> paste -> Save as query
+// Tables: SigninLogs (Entra ID), CloudAppEvents (M365/SharePoint)
+// ============================================================
+
+// ------------------------------------------------------------
+// 1. Entra ID Brute-Force Detection
+// Detects accounts with >10 failed logins or >3 distinct source IPs
+// MITRE: T1110 - Brute Force
+// ------------------------------------------------------------
+SigninLogs
+| where TimeGenerated > ago(1d)
+| where ResultType == "50126"                    // invalid username/password
+| summarize FailedCount = count(),
+            DistinctIPs = dcount(IPAddress),
+            FirstFailure = min(TimeGenerated),
+            LastFailure = max(TimeGenerated)
+    by UserPrincipalName, AppDisplayName
+| where FailedCount > 10 or DistinctIPs > 3
+| project UserPrincipalName, AppDisplayName, FailedCount, DistinctIPs, FirstFailure, LastFailure
+| sort by FailedCount desc
+
+// ------------------------------------------------------------
+// 2. SharePoint Bulk Download (Data Exfiltration)
+// Detects >100 downloads or >100 MB transferred by one account
+// MITRE: T1213 - Data from Information Repositories
+// ------------------------------------------------------------
+CloudAppEvents
+| where TimeGenerated > ago(1d)
+| where ActionType in ("FileDownloaded", "FileAccessedByBrowser", "FileSynchronized")
+| summarize DownloadCount = count(),
+            TotalBytes = sum(SrcFileSize),
+            UniqueFiles = dcount(SrcFileName),
+            SrcIPs = dcount(IPAddress)
+    by AccountObjectId, AccountDisplayName
+| where DownloadCount > 100 or TotalBytes > 100000000
+| project AccountDisplayName, AccountObjectId, DownloadCount, TotalBytes, UniqueFiles, SrcIPs
+| sort by TotalBytes desc
+
+// ------------------------------------------------------------
+// 3. Risky Sign-ins (Entra ID Identity Protection)
+// MITRE: T1078 - Valid Accounts
+// ------------------------------------------------------------
+SigninLogs
+| where TimeGenerated > ago(7d)
+| where RiskLevelDuringSignIn in ("high", "medium")
+| summarize RiskySignins = count() by UserPrincipalName, RiskLevelDuringSignIn, IPAddress, Location
+| sort by RiskySignins desc
+
+// ------------------------------------------------------------
+// 4. Defender XDR - Device with Many Source IPs (Lateral Movement)
+// MITRE: T1021 - Remote Services
+// ------------------------------------------------------------
+DeviceLogonEvents
+| where TimeGenerated > ago(7d)
+| where LogonType == "Interactive"
+| where isnotempty(RemoteIP)
+| summarize Logons = count(), DistinctIPs = dcount(RemoteIP)
+    by AccountName, DeviceName
+| where DistinctIPs > 5
+| project AccountName, DeviceName, Logons, DistinctIPs

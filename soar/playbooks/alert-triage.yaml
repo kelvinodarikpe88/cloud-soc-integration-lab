@@ -1,0 +1,35 @@
+name: Alert Triage Playbook
+description: Standard triage for high-severity alerts across SIEM/EDR sources
+triggers:
+  - source: Sentinel (Analytics Rule)
+  - source: Chronicle (YARA-L detection)
+  - source: Defender XDR (incident)
+
+steps:
+  - id: 1
+    name: Enrich entities
+    actions:
+      - lookup user in Entra ID (Graph API)
+      - lookup IP in VirusTotal / AbuseIPDB
+      - lookup device in Defender/Intune
+
+  - id: 2
+    name: Assess
+    decision:
+      - if risk_score >= 70 -> escalate to Tier 2 (email + Teams/Slack)
+      - if user flagged risky -> force MFA re-auth + revoke sessions
+      - if device non-compliant -> isolate via EDR (Defender)
+
+  - id: 3
+    name: Respond
+    actions:
+      - block IP in cloud firewall (AWS SG / Azure NSG / GCP FW)
+      - disable Okta user session
+      - open incident ticket with evidence timeline
+
+  - id: 4
+    name: Document
+    outputs:
+      - incident report -> SIEM case notes
+      - detection feedback -> tuning PR to detection repo
+

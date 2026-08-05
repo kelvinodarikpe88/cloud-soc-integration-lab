@@ -1,0 +1,8 @@
+// Defender XDR: interactive logons from many IPs (lateral movement signal)
+DeviceLogonEvents
+| where TimeGenerated > ago(7d)
+| where LogonType == "Interactive"
+| where isnotempty(RemoteIP)
+| summarize Logons = count(), DistinctIPs = dcount(RemoteIP) by AccountName, DeviceName
+| where DistinctIPs > 5
+

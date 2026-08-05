@@ -1,0 +1,8 @@
+// SharePoint bulk download (exfiltration)
+CloudAppEvents
+| where TimeGenerated > ago(1d)
+| where ActionType in ("FileDownloaded", "FileAccessedByBrowser", "FileSynchronized")
+| summarize DownloadCount = count(), TotalBytes = sum(SrcFileSize)
+    by AccountObjectId, AccountDisplayName, IPAddress
+| where DownloadCount > 100 or TotalBytes > 100000000
+

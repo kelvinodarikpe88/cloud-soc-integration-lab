@@ -1,0 +1,27 @@
+rule okta_account_takeover {
+  meta:
+    author = "Kelvin Odarikpe"
+    description = "Failed Okta logins followed by success from new IP"
+    severity = "HIGH"
+    mitre_attack_technique = "T1078"
+
+  events:
+    $fail.metadata.event_type = "USER_LOGIN"
+    $fail.metadata.product_name = "Okta"
+    $fail.security_result.action = "BLOCK"
+    $fail.principal.user.userid = $user
+
+    $success.metadata.event_type = "USER_LOGIN"
+    $success.metadata.product_name = "Okta"
+    $success.security_result.action = "ALLOW"
+    $success.principal.user.userid = $user
+    $success.principal.ip != $fail.principal.ip
+
+  match:
+    $user over 15m
+
+  condition:
+    $fail and $success
+}
+
+

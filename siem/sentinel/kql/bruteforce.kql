@@ -1,0 +1,7 @@
+// Entra ID brute force detection
+SigninLogs
+| where TimeGenerated > ago(1d)
+| where ResultType == "50126"
+| summarize FailedCount = count(), DistinctIPs = dcount(IPAddress) by UserPrincipalName
+| where FailedCount > 10 or DistinctIPs > 3
+

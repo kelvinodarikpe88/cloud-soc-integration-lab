@@ -1,0 +1,26 @@
+name: Validate Detection Content
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate shell scripts
+        run: |
+          bash -n cloud/aws/setup.sh
+          bash -n cloud/azure/setup.sh
+          bash -n cloud/gcp/setup.sh
+
+      - name: Validate Python syntax
+        run: python -m py_compile connectors/okta/okta_collector.py
+
+      - name: Check for secrets
+        run: |
+          grep -rEi "(api[_-]?key|password|secret|token)" connectors/ cloud/ || true
+
