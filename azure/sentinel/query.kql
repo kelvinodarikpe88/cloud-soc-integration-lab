@@ -1,0 +1,11 @@
+// Example Microsoft Sentinel sign-in investigation query.
+// Review and adapt table/field names to the connected data source.
+
+SigninLogs
+| where TimeGenerated >= ago(24h)
+| summarize
+    Attempts = count(),
+    SuccessfulSignIns = countif(ResultType == 0),
+    FailedSignIns = countif(ResultType != 0)
+    by UserPrincipalName, IPAddress
+| order by FailedSignIns desc

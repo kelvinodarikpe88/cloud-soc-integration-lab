@@ -1,0 +1,16 @@
+// Example YARA-L 2.0 detection structure.
+// Adapt event fields to the UDM schema available in your Google SecOps environment.
+
+rule cloud_soc_example_detection {
+  meta:
+    author = "Kelvin Odarikpe"
+    description = "Example cloud SOC detection for lab documentation"
+    severity = "MEDIUM"
+
+  events:
+    $e.metadata.event_type = "USER_LOGIN"
+    $e.principal.user.userid = $user
+
+  condition:
+    $e
+}
