@@ -2,13 +2,24 @@
 
 set -euo pipefail
 
-echo "CloudTrail integration setup"
+echo "AWS CloudTrail integration setup"
+echo "================================"
 
-# Configure your AWS CloudTrail integration here.
-# Do not hard-code AWS access keys or secrets.
-#
-# Example:
-# aws cloudtrail describe-trails
-# aws cloudtrail get-trail-status --name <TRAIL_NAME>
+if ! command -v aws >/dev/null 2>&1; then
+    echo "ERROR: AWS CLI is not installed."
+    exit 1
+fi
 
-echo "CloudTrail setup placeholder completed."
+echo "AWS CLI detected."
+
+echo "Configured AWS identity:"
+aws sts get-caller-identity
+
+echo
+echo "CloudTrail trails:"
+aws cloudtrail describe-trails \
+    --query 'trailList[].{Name:Name,HomeRegion:HomeRegion,MultiRegion:IsMultiRegionTrail}' \
+    --output table
+
+echo
+echo "CloudTrail integration check completed."
